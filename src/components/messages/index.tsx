@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { PhotoProvider, PhotoView } from 'react-photo-view'
+import { PhotoProvider } from 'react-photo-view'
 import { Message, useChatStore } from 'src/stores/chat'
 import 'react-photo-view/dist/react-photo-view.css'
 import OpenAIIcon from '../../assets/icons/openai-logomark.svg'
 import { User2, Loader, AlertCircle } from 'lucide-react'
 import { imageStore } from 'src/lib/image-persist'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
+import { useNavigate } from 'react-router-dom'
 
 export const MessageList: React.FC = () => {
   const { messages, fixBrokenMessage } = useChatStore()
@@ -40,6 +41,8 @@ export const MessageList: React.FC = () => {
 
 const ChatItem = ({ model, type, content, isLoading, isError, imageMeta, timestamp }: Message) => {
   const [src, setSrc] = useState([''])
+  const navigate = useNavigate()
+
   useEffect(() => {
     ;(async () => {
       if (type !== 'user') {
@@ -54,6 +57,10 @@ const ChatItem = ({ model, type, content, isLoading, isError, imageMeta, timesta
       }
     })()
   }, [content, type])
+
+  const handleImageClick = (image: string) => {
+    navigate(`/view-image?src=${encodeURIComponent(image)}`)
+  }
 
   return (
     <div className="border-b border-gray-200 p-4 odd:bg-gray-50 last-of-type:border-none">
@@ -91,9 +98,9 @@ const ChatItem = ({ model, type, content, isLoading, isError, imageMeta, timesta
           ) : (
             <div className="flex gap-1">
               {src?.map((image, index) => (
-                <PhotoView key={index} src={image}>
-                  <img src={image} className="w-[200px] cursor-pointer md:w-[300px]"></img>
-                </PhotoView>
+                <button key={index} onClick={() => handleImageClick(image)}>
+                  <img src={image} className="w-[200px] cursor-pointer md:w-[300px]" alt="Generated" />
+                </button>
               ))}
             </div>
           )}
