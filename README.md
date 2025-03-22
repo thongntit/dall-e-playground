@@ -1,4 +1,4 @@
-# AI Image Creator Playground folked from [Quilljou DALL·E 3 Playground](https://github.com/Quilljou/dalle3-playground)
+# DALL·E Playground with Imprint Image (DALL·E 2 Only)
 
 DALL·E Playground (Unofficial) is used to play with OpenAI Image generation API 
 - [DALL·E 3](https://openai.com/dall-e-3)
@@ -8,7 +8,7 @@ You must use your own [OpenAI API Key](https://platform.openai.com/account/api-k
 
 ![screenshot](./screenshots/screenshot.png)
 
-[Live Preview](https://generator-hub.vercel.app/)
+[Live Preview](https://dalleplayground.vercel.app/)
 
 
 ## Features
@@ -20,7 +20,7 @@ You must use your own [OpenAI API Key](https://platform.openai.com/account/api-k
 - [x] Responsive UI
 - [x] Cancel generation
 - [x] Error Handling
-- [ ] Imprinting image (todo)
+- [x] Imprinting image (MVP)
 - [ ] Outprinting image (todo)
 
 ## Dev
@@ -29,4 +29,8 @@ You must use your own [OpenAI API Key](https://platform.openai.com/account/api-k
 pnpm install
 pnpm dev
 ```
+
+---
+
+Forked from [Quilljou DALL·E 3 Playground](https://github.com/Quilljou/dalle3-playground)
 
