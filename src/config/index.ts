@@ -1,4 +1,4 @@
 export const config = {
-  appTitle: 'Image Generator Playground',
-  githubUrl: 'https://github.com/thongntit/generator-hub',
+  appTitle: 'DALL·E Playground with Imprint Image',
+  githubUrl: 'https://dalleplayground.vercel.app',
 }
