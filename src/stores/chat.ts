@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai'
-import { ImageGenerateParams } from 'openai/resources'
+import { ImageGenerateParams, ImageEditParams } from 'openai/resources'
 import { imageStore } from 'src/lib/image-persist'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -23,16 +23,17 @@ type ChatStore = {
   inputPrompt: string
 
   isShowingApiKeyDialog: boolean
-  toggleApiKeyDialog: (value: boolean) => any
+  toggleApiKeyDialog: (value: boolean) => void
 
   isShowingSettingFormSheet: boolean
-  toggleSettingFormSheet: (value: boolean) => any
+  toggleSettingFormSheet: (value: boolean) => void
 
-  onInputChange: (message: string) => any
-  addMessage: () => any
-  fixBrokenMessage: () => any
-  clearMessages: () => any
-  cancelGeneration: () => any
+  onInputChange: (message: string) => void
+  addMessage: () => void
+  fixBrokenMessage: () => void
+  clearMessages: () => void
+  cancelGeneration: () => void
+  imprintImage: (prompt: string, imageFile: File, maskFile?: File) => Promise<OpenAI.ImagesResponse | null>
 }
 
 let controller: AbortController
@@ -141,6 +142,37 @@ export const useChatStore = create(
           console.error(error)
         } finally {
           set(() => ({ isGenerating: false }))
+        }
+      },
+      async imprintImage(prompt, imageFile, maskFile) {
+        const { apiKey } = useConfigStore.getState()
+        if (!apiKey) {
+          console.error('API key is missing')
+          return null
+        }
+
+        try {
+          const openai = new OpenAI({
+            apiKey: apiKey,
+            dangerouslyAllowBrowser: true,
+          })
+
+          const body: ImageEditParams = {
+            image: imageFile,
+            prompt,
+            mask: maskFile,
+            model: 'dall-e-2',
+            response_format: 'b64_json',
+            size: '512x512',
+          }
+
+          const response = await openai.images.edit(body)
+
+          console.log('Imprint result:', response)
+          return response
+        } catch (error) {
+          console.error('Error imprinting image:', error)
+          return null
         }
       },
       cancelGeneration() {
