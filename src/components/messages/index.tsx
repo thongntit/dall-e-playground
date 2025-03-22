@@ -59,8 +59,8 @@ const ChatItem = ({ model, type, content, isLoading, isError, imageMeta, timesta
     })()
   }, [content, type])
 
-  const handleImageClick = (image: string) => {
-    navigate(`/view-image?src=${encodeURIComponent(image)}`)
+  const handleImageClick = (imageUUID: string) => {
+    navigate(`/imprint?id=${encodeURIComponent(imageUUID)}`)
   }
 
   return (
@@ -106,7 +106,7 @@ const ChatItem = ({ model, type, content, isLoading, isError, imageMeta, timesta
                   <Tooltip content="Imprint this image">
                     <button
                       key={index}
-                      onClick={() => handleImageClick(image)}
+                      onClick={() => handleImageClick(content[index])} // Pass the image UUID
                       className="p-2 rounded bg-gray-200 hover:bg-gray-300"
                     >
                       <PenBoxIcon className="h-5 w-5" />

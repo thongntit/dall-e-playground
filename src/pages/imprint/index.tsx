@@ -1,15 +1,26 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useChatStore } from 'src/stores/chat'
+import { imageStore } from 'src/lib/image-persist'
 
-const ViewImage: React.FC = () => {
+const ImprintImage: React.FC = () => {
   const location = useLocation()
   const queryParams = new URLSearchParams(location.search)
-  const imageSrc = queryParams.get('src')
+  const imageId = queryParams.get('id') // Use 'id' instead of 'src'
 
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const canvasWidth = 1024
   const canvasHeight = 1024
+
+  useEffect(() => {
+    if (imageId) {
+      ;(async () => {
+        const retrievedImage = await imageStore.retrieveImage(imageId)
+        setImageSrc(retrievedImage)
+      })()
+    }
+  }, [imageId])
 
   const [isDrawing, setIsDrawing] = useState(false)
   const [points, setPoints] = useState<{ x: number; y: number }[]>([])
@@ -190,4 +201,4 @@ const ViewImage: React.FC = () => {
   )
 }
 
-export default ViewImage
+export default ImprintImage
