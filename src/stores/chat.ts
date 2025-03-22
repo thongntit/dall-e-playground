@@ -23,17 +23,17 @@ type ChatStore = {
   inputPrompt: string
 
   isShowingApiKeyDialog: boolean
-  toggleApiKeyDialog: (value: boolean) => any
+  toggleApiKeyDialog: (value: boolean) => void
 
   isShowingSettingFormSheet: boolean
-  toggleSettingFormSheet: (value: boolean) => any
+  toggleSettingFormSheet: (value: boolean) => void
 
-  onInputChange: (message: string) => any
-  addMessage: () => any
-  fixBrokenMessage: () => any
-  clearMessages: () => any
-  cancelGeneration: () => any
-  imprintImage: (prompt: string, imageFile: File, maskFile?: File) => Promise<any>
+  onInputChange: (message: string) => void
+  addMessage: () => void
+  fixBrokenMessage: () => void
+  clearMessages: () => void
+  cancelGeneration: () => void
+  imprintImage: (prompt: string, imageFile: File, maskFile?: File) => Promise<OpenAI.ImagesResponse | null>
 }
 
 let controller: AbortController

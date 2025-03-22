@@ -7,30 +7,67 @@ const ImprintImage: React.FC = () => {
   const location = useLocation()
   const queryParams = new URLSearchParams(location.search)
   const imageId = queryParams.get('id') // Use 'id' instead of 'src'
+  const [foundImage, setFoundImage] = useState(false)
+  const [customPrompt, setCustomPrompt] = useState('')
+  const [resultImage, setResultImage] = useState<string | null>(null)
+  const [originalFile, setOriginalFile] = useState<File | null>(null)
+  const [maskDataUrl, setMaskDataUrl] = useState<string | null>('')
 
-  const [imageSrc, setImageSrc] = useState<string | null>(null)
+  // drawing state
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const canvasWidth = 1024
-  const canvasHeight = 1024
+  const [canvasWidth, setCanvasWidth] = useState(1024)
+  const [canvasHeight, setCanvasHeight] = useState(1024)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [points, setPoints] = useState<{ x: number; y: number }[]>([])
+
+  const { imprintImage } = useChatStore()
+
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
+      const size = Math.min(viewportWidth, viewportHeight) * 0.9 // Scale to 90% of the smaller dimension
+      setCanvasWidth(size)
+      setCanvasHeight(size)
+    }
+
+    updateCanvasSize()
+    window.addEventListener('resize', updateCanvasSize)
+    return () => window.removeEventListener('resize', updateCanvasSize)
+  }, [])
 
   useEffect(() => {
     if (imageId) {
       ;(async () => {
         const retrievedImage = await imageStore.retrieveImage(imageId)
-        setImageSrc(retrievedImage)
+        setFoundImage(!!retrievedImage)
+
+        const canvas = canvasRef.current
+        if (canvas && retrievedImage) {
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            const image = new Image()
+            image.src = retrievedImage
+            image.onload = async () => {
+              ctx.clearRect(0, 0, canvas.width, canvas.height)
+              ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+              // Preserve the canvas state for later transformation
+              const canvasDataUrl = canvas.toDataURL('image/png')
+              const preservedImageFile = await dataURLToFile(canvasDataUrl, 'preserved-image.png')
+              setOriginalFile(preservedImageFile)
+            }
+          }
+        }
       })()
     }
-  }, [imageId])
+  }, [imageId, canvasWidth, canvasHeight])
 
-  const [isDrawing, setIsDrawing] = useState(false)
-  const [points, setPoints] = useState<{ x: number; y: number }[]>([])
-  const [customPrompt, setCustomPrompt] = useState('')
-  const [resultImage, setResultImage] = useState<string | null>(null)
-  const [maskFile, setMaskFile] = useState<File | null>(null)
-  const [originalFile, setOriginalFile] = useState<File | null>(null)
-  const [maskDataUrl, setMaskDataUrl] = useState<string | null>('')
-
-  const { imprintImage } = useChatStore()
+  const dataURLToFile = async (dataURL: string, fileName: string): Promise<File> => {
+    const response = await fetch(dataURL)
+    const blob = await response.blob()
+    return new File([blob], fileName, { type: blob.type })
+  }
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
@@ -86,34 +123,29 @@ const ImprintImage: React.FC = () => {
     const maskCtx = maskCanvas.getContext('2d')
     if (!maskCtx) return
 
-    // Draw the original image onto the mask canvas
-    const image = new Image()
-    image.src = imageSrc || ''
-    image.onload = () => {
-      const scaleX = maskCanvas.width / image.width
-      const scaleY = maskCanvas.height / image.height
-
-      maskCtx.drawImage(image, 0, 0, maskCanvas.width, maskCanvas.height)
-
-      // Draw the shape in white, scaled to match the mask canvas
-      maskCtx.fillStyle = 'white'
-      maskCtx.beginPath()
-      points.forEach((point, index) => {
-        const scaledX = point.x * scaleX
-        const scaledY = point.y * scaleY
-        if (index === 0) {
-          maskCtx.moveTo(scaledX, scaledY)
-        } else {
-          maskCtx.lineTo(scaledX, scaledY)
-        }
-      })
-      maskCtx.closePath()
-      maskCtx.globalCompositeOperation = 'destination-out' // Set to remove pixels
-      maskCtx.fill()
-
-      // Convert the mask canvas to a Data URL
-      setMaskDataUrl(maskCanvas.toDataURL('image/png'))
+    // Draw the original canvas content onto the mask canvas
+    const canvasCtx = canvas.getContext('2d')
+    if (canvasCtx) {
+      const canvasImageData = canvasCtx.getImageData(0, 0, canvasWidth, canvasHeight)
+      maskCtx.putImageData(canvasImageData, 0, 0)
     }
+
+    // Draw the shape in white on the mask canvas
+    maskCtx.fillStyle = 'white'
+    maskCtx.beginPath()
+    points.forEach((point, index) => {
+      if (index === 0) {
+        maskCtx.moveTo(point.x, point.y)
+      } else {
+        maskCtx.lineTo(point.x, point.y)
+      }
+    })
+    maskCtx.closePath()
+    maskCtx.globalCompositeOperation = 'destination-out' // Set to remove pixels
+    maskCtx.fill()
+
+    // Convert the mask canvas to a Data URL
+    setMaskDataUrl(maskCanvas.toDataURL('image/png'))
   }
 
   const handlePromptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,75 +157,61 @@ const ImprintImage: React.FC = () => {
       const canvas = canvasRef.current
       if (!canvas) return
 
-      // Convert canvas to a File object
-      // const imageDataUrl = canvas.toDataURL('image/png')
-      const response = await fetch(imageSrc || '')
-      const blob = await response.blob()
-      const imageFile = new File([blob], 'image.png', { type: 'image/png' })
-      setOriginalFile(imageFile)
       // Create the mask file
-      // Convert canvas to a File object
-      const maskResponse = await fetch(maskDataUrl || '')
-      const maskBlob = await maskResponse.blob()
-      const maskImageFile = new File([maskBlob], 'image.png', { type: 'image/png' })
-      setMaskFile(maskImageFile)
+      const maskFile = maskDataUrl ? await dataURLToFile(maskDataUrl, 'mask-image.png') : null
 
-      const result = await imprintImage(customPrompt, imageFile, maskImageFile)
+      if (!originalFile || !maskFile) return
+      const result = await imprintImage(customPrompt, originalFile, maskFile)
 
       if (result && result.data) {
         const base64Image = result.data[0]?.b64_json
         if (base64Image) {
           setResultImage(`data:image/png;base64,${base64Image}`)
         }
+        openModal()
       }
     }
   }
 
-  if (!imageSrc) {
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const openModal = () => setIsModalOpen(true)
+  const closeModal = () => setIsModalOpen(false)
+
+  if (!foundImage) {
     return <div className="flex items-center justify-center h-full">No image to display</div>
   }
 
   return (
     <div className="flex items-center justify-center flex-col">
-      <div className="relative flex space-x-4">
-        <div>
-          <img src={imageSrc} alt="Selected" className="max-w-full max-h-full" />
-          <canvas
-            ref={canvasRef}
-            className="absolute top-0 left-0"
-            width={canvasWidth}
-            height={canvasHeight}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-          />
-        </div>
-      </div>
-      <div>
-        <p className="text-gray-600">Mask Preview:</p>
-        <img src={maskDataUrl || ''} alt="Mask Preview" className="max-w-md max-h-md" />
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          className="border"
+          width={canvasWidth}
+          height={canvasHeight}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+        />
       </div>
       <input
         type="text"
         value={customPrompt}
         onChange={handlePromptChange}
-        onKeyPress={handleKeyPress}
+        onKeyDown={handleKeyPress}
         placeholder="Write your custom prompt here"
-        className="mt-4 p-2 border border-gray-300 rounded"
+        className="absolute bottom-5 left-auto p-2 border border-gray-300 rounded"
       />
-      <div>
-        <p className="text-gray-600">Original Image:</p>
-        <img src={originalFile ? URL.createObjectURL(originalFile) : ''} alt="Mask" className="max-w-md max-h-md" />
-        <p className="text-gray-600">Mask Image:</p>
-        <img src={maskFile ? URL.createObjectURL(maskFile) : ''} alt="Mask" className="max-w-md max-h-md" />
-      </div>
 
-      {resultImage && (
-        <div className="mt-4 flex space-x-4">
-          <div>
-            <p className="text-gray-600">Result Image:</p>
-            <img src={resultImage} alt="Result" className="max-w-md max-h-md" />
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="relative">
+            <button onClick={closeModal} className="absolute top-2 right-2 text-white bg-gray-800 rounded-full p-2">
+              ✕
+            </button>
+            <img src={resultImage || ''} alt="Result in Modal" className="max-w-full max-h-full" />
           </div>
         </div>
       )}
