@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { PhotoProvider } from 'react-photo-view'
+import { PhotoProvider, PhotoView } from 'react-photo-view'
 import { Message, useChatStore } from 'src/stores/chat'
 import 'react-photo-view/dist/react-photo-view.css'
 import OpenAIIcon from '../../assets/icons/openai-logomark.svg'
-import { User2, Loader, AlertCircle } from 'lucide-react'
+import { User2, Loader, AlertCircle, PenBoxIcon } from 'lucide-react'
 import { imageStore } from 'src/lib/image-persist'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { useNavigate } from 'react-router-dom'
+import Tooltip from '../ui/tooltip'
 
 export const MessageList: React.FC = () => {
   const { messages, fixBrokenMessage } = useChatStore()
@@ -96,11 +97,22 @@ const ChatItem = ({ model, type, content, isLoading, isError, imageMeta, timesta
               <AlertDescription>{content}</AlertDescription>
             </Alert>
           ) : (
-            <div className="flex gap-1">
+            <div className="flex gap-1 items-end">
               {src?.map((image, index) => (
-                <button key={index} onClick={() => handleImageClick(image)}>
-                  <img src={image} className="w-[200px] cursor-pointer md:w-[300px]" alt="Generated" />
-                </button>
+                <>
+                  <PhotoView key={index} src={image}>
+                    <img src={image} className="w-[200px] cursor-pointer md:w-[300px]" alt="Generated" />
+                  </PhotoView>
+                  <Tooltip content="Imprint this image">
+                    <button
+                      key={index}
+                      onClick={() => handleImageClick(image)}
+                      className="p-2 rounded bg-gray-200 hover:bg-gray-300"
+                    >
+                      <PenBoxIcon className="h-5 w-5" />
+                    </button>
+                  </Tooltip>
+                </>
               ))}
             </div>
           )}
