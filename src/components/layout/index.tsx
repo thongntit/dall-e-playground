@@ -1,13 +1,30 @@
 import React from 'react'
 import { Header } from '../header'
+import { TopicList } from '../topic-list'
+import { useChatStore } from '../../stores/chat'
 
-export const getNoneLayout = (page: React.ReactElement) => page
+interface LayoutProps {
+  children: React.ReactNode
+}
 
-export const getDefaultLayout = (page: React.ReactElement) => {
+export function DefaultLayout({ children }: LayoutProps) {
+  const { currentTopicId } = useChatStore()
+
   return (
-    <div className="h-min-screen">
+    <div className="h-screen flex flex-col">
       <Header />
-      {page}
+      <div className="flex flex-1 overflow-hidden">
+        <TopicList />
+        <div className="flex-1 relative">
+          {currentTopicId ? (
+            <div className="h-full flex flex-col">{children}</div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              Create a new topic or select an existing one to start chatting
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

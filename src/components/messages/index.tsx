@@ -1,128 +1,85 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { PhotoProvider, PhotoView } from 'react-photo-view'
-import { Message, useChatStore } from 'src/stores/chat'
-import 'react-photo-view/dist/react-photo-view.css'
-import OpenAIIcon from '../../assets/icons/openai-logomark.svg'
-import { User2, Loader, AlertCircle, PenBoxIcon } from 'lucide-react'
-import { imageStore } from 'src/lib/image-persist'
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
-import { useNavigate } from 'react-router-dom'
-import Tooltip from '../ui/tooltip'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useChatStore } from '../../stores/chat'
+import { Message } from '../../types/chat'
+import { imageStore } from '../../lib/image-persist'
 
-export const MessageList: React.FC = () => {
-  const { messages, fixBrokenMessage } = useChatStore()
-  const messageListRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    fixBrokenMessage()
-  }, [fixBrokenMessage])
-
-  useEffect(() => {
-    setTimeout(() => {
-      scrollToBottom()
-    }, 100)
-  }, [messages])
-
-  const scrollToBottom = () => {
-    if (messageListRef.current) {
-      messageListRef.current.scrollTop = messageListRef.current.scrollHeight
-    }
-  }
-
-  return (
-    <div className="flex-1 overflow-y-auto" ref={messageListRef} style={{ scrollBehavior: 'smooth' }}>
-      <PhotoProvider>
-        {messages.map((message, index) => (
-          <ChatItem {...message} key={index} />
-        ))}
-      </PhotoProvider>
-    </div>
-  )
+interface ImageState {
+  [key: string]: string | null
 }
 
-const ChatItem = ({ model, type, content, isLoading, isError, imageMeta, timestamp }: Message) => {
-  const [src, setSrc] = useState([''])
-  const navigate = useNavigate()
+export function Messages() {
+  const { topics, currentTopicId } = useChatStore()
+  const [images, setImages] = useState<ImageState>({})
+
+  const currentTopic = topics.find((topic) => topic.id === currentTopicId)
+  const messages = currentTopic?.messages || []
 
   useEffect(() => {
-    ;(async () => {
-      if (type !== 'user') {
-        const newSrc: string[] = []
-        for (const imageUUID of content) {
-          const image = await imageStore.retrieveImage(imageUUID)
-          if (image) {
-            newSrc.push(image)
+    const loadImages = async () => {
+      const newImages: ImageState = {}
+      for (const message of messages) {
+        if (message.imageMeta) {
+          for (const imageId of message.content) {
+            if (!images[imageId]) {
+              const imageData = await imageStore.retrieveImage(imageId)
+              newImages[imageId] = imageData
+            }
           }
         }
-        setSrc(newSrc)
       }
-    })()
-  }, [content, type])
+      setImages((prev) => ({ ...prev, ...newImages }))
+    }
 
-  const handleImageClick = (imageUUID: string) => {
-    navigate(`/imprint?id=${encodeURIComponent(imageUUID)}`)
-  }
+    loadImages()
+  }, [messages])
 
   return (
-    <div className="border-b border-gray-200 p-4 odd:bg-gray-50 last-of-type:border-none">
-      <div className="mb-4 flex items-center gap-2">
-        {type === 'assistant' ? (
-          <>
-            <div className="w-6">
-              <OpenAIIcon />
+    <div className="absolute inset-0 overflow-y-auto">
+      <div className="flex flex-col gap-4 p-4 min-h-full">
+        {messages.map((message: Message, index: number) => (
+          <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[80%] rounded-lg p-4 ${
+                message.type === 'user'
+                  ? 'bg-blue-500 text-white'
+                  : message.isError
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-gray-100'
+              }`}
+            >
+              {message.isLoading ? (
+                <div className="animate-pulse">Generating...</div>
+              ) : message.isError ? (
+                <div className="text-red-500">{message.content[0]}</div>
+              ) : message.imageMeta ? (
+                <div className="space-y-2">
+                  {message.content.map((imageId, idx) =>
+                    images[imageId] ? (
+                      <div key={idx} className="relative group">
+                        <img src={images[imageId] || ''} alt={`Generated ${idx + 1}`} className="w-full rounded-lg" />
+                        <Link
+                          to={`/imprint?id=${imageId}`}
+                          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white rounded-lg"
+                        >
+                          Edit Image
+                        </Link>
+                      </div>
+                    ) : (
+                      <div key={idx} className="w-full h-32 bg-gray-200 animate-pulse rounded-lg" />
+                    ),
+                  )}
+                  <div className="text-xs text-gray-500">
+                    {message.imageMeta.size} • {message.imageMeta.quality} • {message.imageMeta.style}
+                  </div>
+                </div>
+              ) : (
+                <div>{message.content[0]}</div>
+              )}
             </div>
-            {model === 'dall-e-2' ? 'DALL·E 2' : 'DALL·E 3'}
-          </>
-        ) : (
-          <>
-            <User2 />
-            You
-          </>
-        )}
+          </div>
+        ))}
       </div>
-      {isLoading ? <Loader className="animate-spin" /> : null}
-      {imageMeta && (
-        <div className="mb-2 flex text-sm text-zinc-400">
-          {imageMeta?.size}, {imageMeta?.quality} quality, {imageMeta?.style} look
-        </div>
-      )}
-      {type === 'user' ? (
-        content
-      ) : (
-        <>
-          {isError ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{content}</AlertDescription>
-            </Alert>
-          ) : (
-            <div className="flex gap-1 items-end">
-              {src?.map((image, index) => (
-                <>
-                  <PhotoView key={index} src={image}>
-                    <img src={image} className="w-[200px] cursor-pointer md:w-[300px]" alt="Generated" />
-                  </PhotoView>
-                  <Tooltip content="Imprint this image">
-                    <button
-                      key={index}
-                      onClick={() => handleImageClick(content[index])} // Pass the image UUID
-                      className="p-2 rounded bg-gray-200 hover:bg-gray-300"
-                    >
-                      <PenBoxIcon className="h-5 w-5" />
-                    </button>
-                  </Tooltip>
-                </>
-              ))}
-            </div>
-          )}
-        </>
-      )}
-      {timestamp && (
-        <div className="mt-2">
-          <span className="text-xs text-zinc-500">{new Date(timestamp).toLocaleString()}</span>
-        </div>
-      )}
     </div>
   )
 }
