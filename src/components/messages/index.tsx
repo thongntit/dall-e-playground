@@ -57,7 +57,11 @@ export function Messages() {
                   {message.content.map((imageId, idx) =>
                     images[imageId] ? (
                       <div key={idx} className="relative group">
-                        <img src={images[imageId] || ''} alt={`Generated ${idx + 1}`} className="w-full rounded-lg" />
+                        <img
+                          src={images[imageId] || ''}
+                          alt={`Generated ${idx + 1}`}
+                          className="max-w-full max-h-[500px] h-auto object-contain rounded-lg mx-auto"
+                        />
                         <Link
                           to={`/imprint?id=${imageId}`}
                           className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white rounded-lg"
