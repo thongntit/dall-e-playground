@@ -1,7 +1,7 @@
 {
-  "name": "vite-react-tailwind-starter",
+  "name": "dalle-playground",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "prepare": "husky install",
     "dev": "vite",
@@ -9,7 +9,11 @@
     "typecheck": "tsc --noEmit",
     "typecheck:watch": "tsc --noEmit --watch",
     "lint": "eslint --quiet src --ext .ts,.tsx && stylelint src/**/*.less",
-    "lint:fix": "eslint --quiet --fix src --ext .ts,.tsx && stylelint --fix src/**/*.less"
+    "lint:fix": "eslint --quiet --fix src --ext .ts,.tsx && stylelint --fix src/**/*.less",
+    "release:patch": "npm version patch && git push && git push --tags",
+    "release:minor": "npm version minor && git push && git push --tags",
+    "release:major": "npm version major && git push && git push --tags",
+    "release": "npm run release:patch"
   },
   "dependencies": {
     "@loadable/component": "^5.15.3",
