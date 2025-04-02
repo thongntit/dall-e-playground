@@ -74,6 +74,7 @@ export function Messages() {
                     ),
                   )}
                   <div className="text-xs text-gray-500">
+                    {message.model && `${message.model} • `}
                     {message.imageMeta.size} • {message.imageMeta.quality} • {message.imageMeta.style}
                   </div>
                 </div>
