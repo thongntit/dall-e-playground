@@ -62,12 +62,18 @@ export function Messages() {
                           alt={`Generated ${idx + 1}`}
                           className="max-w-full max-h-[500px] h-auto object-contain rounded-lg mx-auto"
                         />
-                        <Link
-                          to={`/imprint?id=${imageId}`}
-                          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white rounded-lg"
-                        >
-                          Edit Image
-                        </Link>
+                        {message.model === 'dall-e-3' ? (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white rounded-lg">
+                            Image editing only available for DALL-E 2 images
+                          </div>
+                        ) : (
+                          <Link
+                            to={`/imprint?id=${imageId}`}
+                            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white rounded-lg"
+                          >
+                            Edit Image
+                          </Link>
+                        )}
                       </div>
                     ) : (
                       <div key={idx} className="w-full h-32 bg-gray-200 animate-pulse rounded-lg" />
