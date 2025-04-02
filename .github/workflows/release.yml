@@ -1,0 +1,42 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history for tags
+
+      - name: Extract tag name
+        id: tag
+        run: echo "::set-output name=name::${GITHUB_REF#refs/tags/}"
+
+      # Read the version from CHANGELOG.md and extract entry for this version
+      - name: Get changelog entry
+        id: changelog
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          CHANGELOG_CONTENT=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d')
+          echo "CHANGELOG_CONTENT<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG_CONTENT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ steps.tag.outputs.name }}
+          body: ${{ env.CHANGELOG_CONTENT }}
+          draft: false
+          prerelease: false
