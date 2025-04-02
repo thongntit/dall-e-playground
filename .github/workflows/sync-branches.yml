@@ -1,0 +1,36 @@
+name: Create Sync PR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-sync-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_BRANCHES_PAT }}
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_BRANCHES_PAT }}
+        run: |
+          # Check if PR already exists
+          PR_EXISTS=$(gh pr list --base dev --head main --json number | jq length)
+          
+          if [ "$PR_EXISTS" -eq "0" ]; then
+            # Create PR using GitHub CLI
+            gh pr create \
+              --base dev \
+              --head main \
+              --title "Sync: main → dev" \
+              --body "This PR syncs changes from main to dev branch. Please review and merge."
+            
+            echo "Pull request created successfully."
+          else
+            echo "A pull request from main to dev already exists. Skipping PR creation."
+          fi

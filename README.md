@@ -6,7 +6,7 @@ DALL·E Playground (Unofficial) is used to play with OpenAI Image generation API
 
 You must use your own [OpenAI API Key](https://platform.openai.com/account/api-keys)
 
-![screenshot](./screenshots/screenshot.png)
+![screenshot](./screenshots/screenshot-1.png)
 
 [Live Preview](https://dalleplayground.vercel.app/)
 
