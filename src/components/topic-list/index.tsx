@@ -68,7 +68,7 @@ export function TopicList() {
         {topics.map((topic) => (
           <div
             key={topic.id}
-            className={`p-2 rounded flex justify-between items-center cursor-pointer ${
+            className={`p-2 rounded flex justify-between items-center cursor-pointer group ${
               topic.id === currentTopicId ? 'bg-gray-100' : 'hover:bg-gray-50'
             }`}
           >
@@ -87,17 +87,31 @@ export function TopicList() {
                 autoFocus
               />
             ) : (
-              <div
-                className="flex-1"
-                onClick={() => selectTopic(topic.id)}
-                onDoubleClick={() => setEditingTopic(topic)}
-              >
-                {topic.title}
+              <div className="flex-1 min-w-0 flex items-center" onClick={() => selectTopic(topic.id)}>
+                <span className="truncate select-none w-full">{topic.title}</span>
               </div>
             )}
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteTopic(topic.id)}>
-              ×
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setEditingTopic(topic)
+                }}
+              >
+                ✎
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => deleteTopic(topic.id)}
+              >
+                ×
+              </Button>
+            </div>
           </div>
         ))}
       </div>
