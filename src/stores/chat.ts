@@ -25,6 +25,9 @@ interface ChatStore {
   deleteTopic: (id: string) => void
   renameTopic: (id: string, newTitle: string) => void
 
+  // Prompt enhancement
+  enhancePrompt: (userPrompt: string) => Promise<string>
+
   // Message management
   onInputChange: (message: string) => void
   addMessage: () => void
@@ -91,6 +94,70 @@ export const useChatStore = create<ChatStore>()(
         set(() => ({ inputPrompt }))
       },
 
+      async enhancePrompt(userPrompt: string): Promise<string> {
+        const { apiKey } = useConfigStore.getState()
+
+        if (!apiKey) {
+          return userPrompt // Return original if no API key
+        }
+
+        const openai = new OpenAI({
+          apiKey: apiKey,
+          dangerouslyAllowBrowser: true,
+        })
+
+        try {
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4', // Or gpt-3.5-turbo if preferred
+            messages: [
+              {
+                role: 'system',
+                content:
+                  "You are an expert at enhancing image generation prompts. Add more descriptive details while maintaining the user's original intent. Don't change the subject or style, just make it more detailed.",
+              },
+              {
+                role: 'user',
+                content: `Original prompt: "${userPrompt}"`,
+              },
+            ],
+            functions: [
+              {
+                name: 'enhance_image_prompt',
+                description: 'Enhance an image generation prompt with more descriptive details',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    enhancedPrompt: {
+                      type: 'string',
+                      description:
+                        'The enhanced prompt with more descriptive details while maintaining the original intent',
+                    },
+                  },
+                  required: ['enhancedPrompt'],
+                },
+              },
+            ],
+            function_call: { name: 'enhance_image_prompt' },
+          })
+
+          const functionCall = response.choices[0]?.message?.function_call
+
+          if (functionCall && functionCall.name === 'enhance_image_prompt') {
+            try {
+              const args = JSON.parse(functionCall.arguments)
+              return args.enhancedPrompt
+            } catch (e) {
+              console.error('Error parsing function call arguments:', e)
+            }
+          }
+        } catch (error) {
+          console.error('Error enhancing prompt:', error)
+        }
+
+        // Fallback to original prompt if anything fails
+        return userPrompt
+      },
+
       async addMessage() {
         const { style, size, apiKey, quality, model, noImage } = useConfigStore.getState()
         if (!apiKey) {
@@ -141,8 +208,37 @@ export const useChatStore = create<ChatStore>()(
           dangerouslyAllowBrowser: true,
         })
 
+        // Generate enhanced prompt
+        let enhancedPrompt: string
+        try {
+          enhancedPrompt = await get().enhancePrompt(get().inputPrompt)
+
+          // Update loading message to show enhanced prompt
+          set((state) => ({
+            topics: state.topics.map((topic) =>
+              topic.id === state.currentTopicId
+                ? {
+                    ...topic,
+                    messages: [
+                      ...topic.messages.slice(0, -1),
+                      {
+                        ...topic.messages[topic.messages.length - 1],
+                        content: ['Generating image...'],
+                        enhancedPrompt, // Add enhanced prompt to loading message
+                      },
+                    ],
+                    updatedAt: Date.now(),
+                  }
+                : topic,
+            ),
+          }))
+        } catch (error) {
+          console.error('Failed to enhance prompt:', error)
+          enhancedPrompt = get().inputPrompt // Fallback to original
+        }
+
         const options: ImageGenerateParams = {
-          prompt: get().inputPrompt,
+          prompt: enhancedPrompt, // Use enhanced prompt for image generation
           model: model || 'dall-e-3',
           n: model === 'dall-e-3' ? 1 : noImage,
           response_format: 'b64_json',
@@ -186,6 +282,7 @@ export const useChatStore = create<ChatStore>()(
                         model: model || '',
                         content: key,
                         imageMeta,
+                        enhancedPrompt, // Store the enhanced prompt
                         isError: false,
                         timestamp: Date.now(),
                       },

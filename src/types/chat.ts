@@ -12,6 +12,7 @@ export interface Message {
   isError: boolean
   isLoading?: boolean
   imageMeta?: ImageMeta
+  enhancedPrompt?: string // Store the enhanced version of the user's prompt
   timestamp: number
   model?: string | ''
 }

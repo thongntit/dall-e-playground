@@ -49,11 +49,30 @@ export function Messages() {
               }`}
             >
               {message.isLoading ? (
-                <div className="animate-pulse">Generating...</div>
+                <div className="space-y-2">
+                  {message.enhancedPrompt ? (
+                    <>
+                      <div className="text-sm p-2 bg-gray-50 rounded border border-gray-100 mb-2">
+                        <div className="font-semibold text-xs text-gray-500">Enhanced prompt:</div>
+                        <div className="text-gray-700">{message.enhancedPrompt}</div>
+                      </div>
+                      <div className="animate-pulse">Generating image...</div>
+                    </>
+                  ) : (
+                    <div className="animate-pulse">Enhancing prompt...</div>
+                  )}
+                </div>
               ) : message.isError ? (
                 <div className="text-red-500">{message.content[0]}</div>
               ) : message.imageMeta ? (
                 <div className="space-y-2">
+                  {/* Display enhanced prompt if available */}
+                  {message.enhancedPrompt && (
+                    <div className="text-sm p-2 bg-gray-50 rounded border border-gray-100 mb-2">
+                      <div className="font-semibold text-xs text-gray-500">Enhanced prompt:</div>
+                      <div className="text-gray-700">{message.enhancedPrompt}</div>
+                    </div>
+                  )}
                   {message.content.map((imageId, idx) =>
                     images[imageId] ? (
                       <div key={idx} className="relative group">
