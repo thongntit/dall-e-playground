@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai'
-import { ImageGenerateParams, ImageEditParams } from 'openai/resources'
+import { ImageEditParams } from 'openai/resources'
 import { imageStore } from 'src/lib/image-persist'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -237,14 +237,38 @@ export const useChatStore = create<ChatStore>()(
           enhancedPrompt = get().inputPrompt // Fallback to original
         }
 
-        const options: ImageGenerateParams = {
+        const options: any = {
           prompt: enhancedPrompt, // Use enhanced prompt for image generation
           model: model || 'dall-e-3',
-          n: model === 'dall-e-3' ? 1 : noImage,
-          response_format: 'b64_json',
+          n: model === 'dall-e-3' || model === 'gpt-image-1' ? 1 : noImage,
           size: size || '1024x1024',
-          style: style || 'vivid',
-          quality: quality || 'standard',
+        }
+
+        // response_format is not supported by gpt-image-1
+        if (model !== 'gpt-image-1') {
+          options.response_format = 'b64_json'
+        }
+
+        // Add model-specific parameters
+        if (model === 'dall-e-3') {
+          options.style = style || 'vivid'
+          options.quality = quality || 'standard'
+        } else if (model === 'gpt-image-1') {
+          const { background, moderation, outputCompression, outputFormat } = useConfigStore.getState()
+          options.quality = quality // For gpt-image-1: 'high', 'medium', 'low', 'auto'
+
+          // Add gpt-image-1 specific parameters
+          // Use type assertion for gpt-image-1 specific parameters
+          const gptImageOptions = options as any
+          if (background) gptImageOptions.background = background
+          if (moderation) gptImageOptions.moderation = moderation
+          if (outputCompression !== undefined) gptImageOptions.output_compression = outputCompression
+          if (outputFormat) gptImageOptions.output_format = outputFormat
+
+          // Note: format and compression parameters are not supported by the API
+          // despite being in the SDK type definitions
+        } else if (model === 'dall-e-2') {
+          // DALL-E 2 has no style or quality parameters
         }
 
         controller = new AbortController()
@@ -254,7 +278,28 @@ export const useChatStore = create<ChatStore>()(
           const completion = await openai.images.generate(options, {
             signal: signal,
           })
-          const base64 = (completion.data?.map((image) => image.b64_json)?.filter((img) => img) as string[]) || []
+
+          let base64: string[] = []
+
+          // Handle different response formats for different models
+          if (model === 'gpt-image-1' && completion.data) {
+            // gpt-image-1 returns base64-encoded images directly
+            base64 = completion.data
+              .map((image) => {
+                // Check if b64_json exists, otherwise use the raw string which should be base64
+                return image.b64_json || (image as any).base64
+              })
+              .filter(Boolean) as string[]
+
+            // Log token usage if available (gpt-image-1 model returns this)
+            if (completion.usage) {
+              console.log('Token usage for image generation:', completion.usage)
+            }
+          } else {
+            // For DALL-E models
+            base64 = (completion.data?.map((image) => image.b64_json)?.filter((img) => img) as string[]) || []
+          }
+
           if (base64?.length === 0) throw new Error('invalid base64')
 
           const key: string[] = []
@@ -264,9 +309,20 @@ export const useChatStore = create<ChatStore>()(
           }
 
           const imageMeta: ImageMeta = {
-            style: useConfigStore.getState().style || 'vivid',
             size: useConfigStore.getState().size || '1024x1024',
-            quality: useConfigStore.getState().quality || 'standard',
+          }
+
+          // Add model-specific metadata
+          if (model === 'dall-e-3') {
+            imageMeta.style = useConfigStore.getState().style || 'vivid'
+            imageMeta.quality = useConfigStore.getState().quality || 'standard'
+          } else if (model === 'gpt-image-1') {
+            const config = useConfigStore.getState()
+            imageMeta.quality = config.quality
+            imageMeta.background = config.background
+
+            // Note: format and compression are not included in metadata
+            // since they're not supported by the API
           }
 
           set((state) => ({
