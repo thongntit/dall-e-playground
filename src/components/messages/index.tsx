@@ -81,7 +81,7 @@ export function Messages() {
                           alt={`Generated ${idx + 1}`}
                           className="max-w-full max-h-[500px] h-auto object-contain rounded-lg mx-auto"
                         />
-                        {message.model === 'dall-e-3' ? (
+                        {message.model === 'dall-e-3' || message.model === 'gpt-image-1' ? (
                           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white rounded-lg">
                             Image editing only available for DALL-E 2 images
                           </div>
@@ -100,7 +100,19 @@ export function Messages() {
                   )}
                   <div className="text-xs text-gray-500">
                     {message.model && `${message.model} • `}
-                    {message.imageMeta.size} • {message.imageMeta.quality} • {message.imageMeta.style}
+                    {message.imageMeta.size}
+
+                    {/* Model-specific metadata */}
+                    {message.model === 'dall-e-3' && message.imageMeta.quality && ` • ${message.imageMeta.quality}`}
+                    {message.model === 'dall-e-3' && message.imageMeta.style && ` • ${message.imageMeta.style}`}
+
+                    {/* GPT-Image-1 specific metadata */}
+                    {message.model === 'gpt-image-1' &&
+                      message.imageMeta.quality &&
+                      ` • quality: ${message.imageMeta.quality}`}
+                    {message.model === 'gpt-image-1' &&
+                      message.imageMeta.background &&
+                      ` • background: ${message.imageMeta.background}`}
                   </div>
                 </div>
               ) : (

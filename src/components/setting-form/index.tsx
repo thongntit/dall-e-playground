@@ -1,10 +1,11 @@
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from 'src/components/ui/select'
 import { Quality, Size, Style, useConfigStore, Model, NoImage } from 'src/stores/config'
+import { Background, Format } from 'src/types/chat'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { HelpCircle } from 'lucide-react'
 
-const models: Model[] = ['dall-e-3', 'dall-e-2']
+const models: Model[] = ['dall-e-3', 'dall-e-2', 'gpt-image-1']
 const sizes: Size[] = ['1024x1024', '1792x1024', '1024x1792']
 const qualities: Quality[] = ['standard', 'hd']
 const styles: Style[] = ['vivid', 'natural']
@@ -30,6 +31,12 @@ const configPerModel: Record<
     qualities: [],
     styles: [],
   },
+  'gpt-image-1': {
+    noImages: [1],
+    sizes: ['1024x1024', '1792x1024', '1024x1536', 'auto'],
+    qualities: ['high', 'medium', 'low', 'auto'],
+    styles: [],
+  },
 }
 
 export const SettingForm = () => {
@@ -47,6 +54,15 @@ export const SettingForm = () => {
     apiKey,
     setAPIKey,
     reset,
+    // GPT-Image-1 specific parameters
+    background,
+    setBackground,
+    moderation,
+    setModeration,
+    outputFormat,
+    setOutputFormat,
+    outputCompression,
+    setOutputCompression,
   } = useConfigStore()
   const { noImages, sizes, qualities, styles } = configPerModel[model || ''] || {}
   return (
@@ -78,17 +94,70 @@ export const SettingForm = () => {
         </Select>
       </div>
 
+      {model === 'gpt-image-1' && (
+        <div>
+          <label className="block py-2">Background</label>
+          <Select value={background || 'auto'} onValueChange={(value) => setBackground(value as Background)}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Background" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {['transparent', 'opaque', 'auto'].map((item) => (
+                  <SelectItem value={item} key={item}>
+                    {item.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {model === 'gpt-image-1' && (
+        <div>
+          <label className="block py-2">Output Format</label>
+          <Select value={outputFormat || 'png'} onValueChange={(value) => setOutputFormat(value as Format)}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Output Format" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {['png', 'jpeg', 'webp'].map((item) => (
+                  <SelectItem value={item} key={item}>
+                    {item.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {model === 'gpt-image-1' && (outputFormat === 'jpeg' || outputFormat === 'webp') && (
+        <div>
+          <label className="block py-2">Output Compression (0-100%)</label>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={outputCompression}
+            onChange={(e) => setOutputCompression(Number(e.target.value))}
+          />
+        </div>
+      )}
+
       {qualities?.length !== 0 && (
         <div>
           <label className="block py-2">Quality</label>
-          <Select value={quality} onValueChange={(value) => setQuality(value as Quality)}>
+          <Select value={quality || 'auto'} onValueChange={(value) => setQuality(value as Quality)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Quality" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 {qualities.map((item) => (
-                  <SelectItem value={item} key={item}>
+                  <SelectItem value={item || ''} key={item}>
                     {item?.toUpperCase()}
                   </SelectItem>
                 ))}
